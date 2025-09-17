@@ -36,7 +36,33 @@ Follow these steps to get started:
    ```bash
    pip install -r requirements.txt
 
-4. **Run The Application*
+4. **Run The Application**
    ```bash
    python web_api.py
 
+5. **Access The Web UI**
+   Open your browser and visit:
+   ```bash
+   http://localhost:5000
+
+## 📖 Usage Guide
+
+Once the UI loads, you will have the following options:
+
+* Single Audit → Run an audit on a single target.
+
+* Batch Audit → Perform audits on multiple targets in one go.
+
+* Schedule Audit → Configure recurring or timed audits.
+
+After an audit completes, you can download the results as:
+
+* HTML Report (interactive, easy to view in a browser)
+
+* PDF Report (printable, shareable format)
+
+## 🛠 Requirements
+
+* Python 3.8+
+
+* Dependencies listed in requirements.txt
