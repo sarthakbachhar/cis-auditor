@@ -1,0 +1,64 @@
+2025-09-17 10:42:19,135 - INFO - ReportLab found - version: 4.4.3
+2025-09-17 10:42:19,153 - INFO - PDF generation fully available (reportlab + pdf_generator)
+2025-09-17 10:42:19,168 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.10.1.128:5000
+2025-09-17 10:42:19,168 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-17 10:42:19,169 - INFO -  * Restarting with stat
+2025-09-17 10:42:19,534 - INFO - ReportLab found - version: 4.4.3
+2025-09-17 10:42:19,546 - INFO - PDF generation fully available (reportlab + pdf_generator)
+2025-09-17 10:42:19,559 - WARNING -  * Debugger is active!
+2025-09-17 10:42:19,560 - INFO -  * Debugger PIN: 129-802-830
+2025-09-17 10:42:20,073 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:20] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:24,987 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:24] "GET / HTTP/1.1" 200 -
+2025-09-17 10:42:25,088 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:25,603 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "[36mGET / HTTP/1.1[0m" 304 -
+2025-09-17 10:42:25,657 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:25,776 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "[36mGET / HTTP/1.1[0m" 304 -
+2025-09-17 10:42:25,844 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:25,953 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:25] "[36mGET / HTTP/1.1[0m" 304 -
+2025-09-17 10:42:26,011 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:26] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:26,115 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:26] "[36mGET / HTTP/1.1[0m" 304 -
+2025-09-17 10:42:26,153 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:26] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:31,159 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:31] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:36,169 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:36] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:40,687 - INFO - Starting audit for 192.168.1.65 with OS ubuntu and level level1
+2025-09-17 10:42:40,688 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:40] "POST /api/audit/run HTTP/1.1" 200 -
+2025-09-17 10:42:40,690 - INFO - Running Ansible playbook: /home/kali/ubuntu/playbooks/cis_audit_level1.yml
+2025-09-17 10:42:41,800 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:41] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:41,804 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:41] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:44,109 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:44] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:44,802 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:44] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:46,796 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:46] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:47,892 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:47] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:50,893 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:50] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:51,798 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:51] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:53,952 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:53] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:56,799 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:56] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:56,950 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:56] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:42:59,959 - INFO - 127.0.0.1 - - [17/Sep/2025 10:42:59] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:01,460 - INFO - Audit completed for 192.168.1.65 with 17 checks
+2025-09-17 10:43:02,007 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:02] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:02,963 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:02] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:05,969 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:05] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:07,020 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:07] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:11,659 - INFO - Report requested for audit ID: 24ac02ca-9115-4f4e-9e47-b0ceb3063e93
+2025-09-17 10:43:11,659 - INFO - Generating HTML report for audit ID: 24ac02ca-9115-4f4e-9e47-b0ceb3063e93
+2025-09-17 10:43:11,660 - WARNING - Template file not found at /home/kali/ubuntu/report_template.html, creating basic HTML report
+2025-09-17 10:43:11,660 - INFO - HTML report generated successfully: reports/192_168_1_65_20250917_104311.html
+2025-09-17 10:43:11,660 - INFO - HTML report generated successfully at: /home/kali/ubuntu/reports/192_168_1_65_20250917_104311.html
+2025-09-17 10:43:11,662 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:11] "GET /api/audit/24ac02ca-9115-4f4e-9e47-b0ceb3063e93/report HTTP/1.1" 200 -
+2025-09-17 10:43:12,922 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:12] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:17,937 - INFO - Report requested for audit ID: 24ac02ca-9115-4f4e-9e47-b0ceb3063e93
+2025-09-17 10:43:17,937 - INFO - Generating PDF report for audit ID: 24ac02ca-9115-4f4e-9e47-b0ceb3063e93
+2025-09-17 10:43:17,939 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:17] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:17,940 - INFO - ReportLab available - version: 4.4.3
+2025-09-17 10:43:17,944 - INFO - Professional PDF generator available
+2025-09-17 10:43:17,945 - ERROR - Error in PDF report generation: 'ProfessionalPDFReportGenerator' object has no attribute 'colors'
+2025-09-17 10:43:17,946 - ERROR - Professional PDF generation failed for audit 24ac02ca-9115-4f4e-9e47-b0ceb3063e93
+2025-09-17 10:43:17,973 - INFO - Basic PDF report generated successfully: reports/192_168_1_65_20250917_104317.pdf
+2025-09-17 10:43:17,974 - INFO - PDF report generated successfully at: /home/kali/ubuntu/reports/192_168_1_65_20250917_104317.pdf
+2025-09-17 10:43:17,975 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:17] "GET /api/audit/24ac02ca-9115-4f4e-9e47-b0ceb3063e93/report?format=pdf HTTP/1.1" 200 -
+2025-09-17 10:43:22,925 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:22] "GET /api/audits/active HTTP/1.1" 200 -
+2025-09-17 10:43:27,929 - INFO - 127.0.0.1 - - [17/Sep/2025 10:43:27] "GET /api/audits/active HTTP/1.1" 200 -

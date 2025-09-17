@@ -1,0 +1,15 @@
+# CIS Auditor Targets File
+# Format: IP USERNAME KEY_PATH [LEVEL]
+# Lines starting with # are ignored
+# Levels: level1 (default), level2
+
+# Production servers
+ip username ssh-key-location os test-level
+#10.0.0.50 admin /home/user/.ssh/id_rsa_prod level2
+
+# Development servers  
+#192.168.1.200 devuser /home/user/.ssh/id_rsa_dev level1
+#192.168.1.201 devuser /home/user/.ssh/id_rsa_dev level1
+
+# Test environment
+#172.16.0.10 testuser /home/user/.ssh/test_key level1

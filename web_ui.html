@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CIS Security Auditor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;margin:0;background:#f5f6fa;color:#333;}
+    header {background: linear-gradient(90deg,#667eea,#764ba2);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;}
+    header h1 {margin:0;font-size:20px;font-weight:600;}
+    header .status {font-size:14px;}
+    .container {display:flex;}
+    nav {width:220px;background:#fff;min-height:100vh;padding:20px 0;box-shadow:1px 0 5px rgba(0,0,0,0.05);}
+    nav ul {list-style:none;padding:0;margin:0;}
+    nav li {padding:12px 20px;cursor:pointer;color:#444;}
+    nav li:hover {background:#f0f0f0;}
+    main {flex:1;padding:20px;}
+    .kpi-row {display:flex;gap:12px;margin-bottom:20px;}
+    .kpi-card {flex:1;background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+    .kpi-card div:first-child {font-size:12px;color:#6c757d;}
+    .kpi-card div:last-child {font-size:22px;font-weight:700;}
+    .panel {background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+    .panel h3 {margin-top:0;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:16px;}
+    table {width:100%;border-collapse:collapse;}
+    th,td {text-align:left;padding:10px;border-bottom:1px solid #eee;}
+    .status-completed {color:#28a745;font-weight:600;}
+    .status-running {color:#ffc107;font-weight:600;}
+    .status-failed {color:#dc3545;font-weight:600;}
+    .page {display:none;}
+    .page.active {display:block;}
+    form label {display:block;margin-bottom:12px;}
+    form input, form select {padding:6px 8px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    form button {margin-top:10px;padding:8px 16px;border:none;border-radius:4px;background:#667eea;color:#fff;cursor:pointer;}
+    form button:hover {background:#5563c1;}
+    .action-btn {cursor:pointer;color:#007bff;text-decoration:underline;margin:0 4px;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CIS Security Auditor</h1>
+    <div class="status">Healthy • v2.0.0</div>
+  </header>
+  <div class="container">
+    <nav>
+      <ul>
+        <li onclick="showPage('overview')">Overview</li>
+        <li onclick="showPage('run')">Run Audit</li>
+        <li onclick="showPage('batch')">Batch Upload</li>
+        <li onclick="showPage('active')">Active Audits</li>
+        <li onclick="showPage('schedule')">Schedule Audit</li>
+        <li onclick="showPage('reports')">Reports</li>
+      </ul>
+    </nav>
+    <main>
+      <!-- Overview -->
+      <div id="overview" class="page active">
+        <div class="kpi-row">
+          <div class="kpi-card"><div>Total Audits</div><div id="kpi-total">0</div></div>
+          <div class="kpi-card"><div>Running</div><div id="kpi-running">0</div></div>
+          <div class="kpi-card"><div>Completed</div><div id="kpi-completed">0</div></div>
+          <div class="kpi-card"><div>Failed</div><div id="kpi-failed">0</div></div>
+        </div>
+        <div class="panel">
+          <h3>Recent Audits</h3>
+          <table id="recent-audits">
+            <thead>
+              <tr>
+                <th>IP</th><th>OS</th><th>Level</th><th>Status</th><th>Start Time</th>
+                <th>Duration</th><th>Passed</th><th>Failed</th><th>% Compliance</th><th>Report</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Run Audit -->
+      <div id="run" class="page">
+        <div class="panel">
+          <h3>Run Single Audit</h3>
+          <form id="single-audit-form">
+            <label>IP Address <input type="text" name="ip" placeholder="192.168.1.10"></label>
+            <label>Username <input type="text" name="username" placeholder="admin"></label>
+            <label>Private Key Path <input type="text" name="key" placeholder="/home/user/.ssh/id_rsa"></label>
+            <label>Operating System <select name="os" id="os-select" onchange="toggleLevel()"><option value="Linux">Linux</option><option value="Windows">Windows</option></select></label>
+            <label id="level-label">Level <select name="level"><option value="L1">Level 1</option><option value="L2">Level 2</option></select></label>
+            <button type="submit">Run Audit</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Batch Upload -->
+      <div id="batch" class="page">
+        <div class="panel">
+          <h3>Batch Upload Targets</h3>
+          <form id="batch-form">
+            <label>Targets File <input type="file" name="file"></label>
+            <label>Max Workers <input type="number" name="workers" min="1" max="10" value="3"></label>
+            <button type="submit">Upload & Run</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Active Audits -->
+      <div id="active" class="page">
+        <div class="panel">
+          <h3>Active Audits</h3>
+          <div id="active-audits">No active audits currently.</div>
+        </div>
+      </div>
+
+      <!-- Schedule Audit -->
+      <div id="schedule" class="page">
+        <div class="panel">
+          <h3>Schedule Audit</h3>
+          <form id="schedule-form">
+            <label>Target File <input type="file" name="file"></label>
+            <label>Select Date <input type="date" name="date"></label>
+            <label>Select Time <input type="time" name="time"></label>
+            <button type="submit">Schedule</button>
+          </form>
+          <p><small>Choose a date and time when the audit should run. The system will handle the scheduling automatically.</small></p>
+        </div>
+        <div class="panel">
+          <h3>Next Scheduled Audits</h3>
+          <table id="scheduled-audits">
+            <thead>
+              <tr>
+                <th>Target File</th><th>Date</th><th>Time</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4">No scheduled audits.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Reports -->
+      <div id="reports" class="page">
+        <div class="panel">
+          <h3>All Reports</h3>
+          <table id="reports-table">
+            <thead>
+              <tr>
+                <th>IP</th><th>OS</th><th>Status</th><th>% Compliance</th><th>Report</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Add this JavaScript to the end of the script section in web_ui.html
+// Replace the existing script section with this enhanced version
+
+// Enhanced page navigation
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    
+    // Refresh data when showing certain pages
+    if (id === 'schedule') {
+        refreshScheduledAudits();
+    } else if (id === 'active') {
+        refreshActiveAudits();
+    }
+}
+
+function toggleLevel() {
+    const os = document.getElementById('os-select').value;
+    document.getElementById('level-label').style.display = (os === 'Linux') ? 'block' : 'none';
+}
+
+// Enhanced audit data refresh
+async function refreshRecentAudits() {
+    try {
+        const res = await fetch('/api/audits/active');
+        if (!res.ok) throw new Error('Failed to fetch audits');
+        
+        const data = await res.json();
+        const tbody = document.querySelector('#recent-audits tbody');
+        const reportsTbody = document.querySelector('#reports-table tbody');
+        tbody.innerHTML = '';
+        reportsTbody.innerHTML = '';
+
+        let total = 0, running = 0, completed = 0, failed = 0;
+
+        data.audits.forEach(a => {
+            total++;
+            if (a.status === 'running') running++;
+            else if (a.status === 'completed') completed++;
+            else if (a.status === 'failed') failed++;
+
+            let passed = a.summary?.passed || 0;
+            let failedChecks = a.summary?.failed || 0;
+            let compliance = (passed + failedChecks) > 0 ? Math.round((passed / (passed + failedChecks)) * 100) : 0;
+
+            const statusClass = `status-${a.status}`;
+            const reportLinks = a.status === 'completed' ? `
+                <a href="/api/audit/${a.id}/report" target="_blank" style="color: #007bff; text-decoration: none;">HTML</a> |
+                <a href="/api/audit/${a.id}/report?format=pdf" target="_blank" style="color: #007bff; text-decoration: none;">PDF</a>` : 
+                '<span style="color: #6c757d;">N/A</span>';
+
+            // Reports table row
+            const trReports = document.createElement('tr');
+            trReports.innerHTML = `
+                <td>${a.target || ''}</td>
+                <td>${a.os || ''}</td>
+                <td><span class="${statusClass}">${a.status.toUpperCase()}</span></td>
+                <td><strong>${compliance}%</strong></td>
+                <td>${reportLinks}</td>`;
+            reportsTbody.appendChild(trReports);
+
+            // Overview table row
+            const trOverview = document.createElement('tr');
+            trOverview.innerHTML = `
+                <td>${a.target || ''}</td>
+                <td>${a.os || ''}</td>
+                <td>${a.level || ''}</td>
+                <td><span class="${statusClass}">${a.status.toUpperCase()}</span></td>
+                <td>${a.start_time || ''}</td>
+                <td>${a.duration || ''}</td>
+                <td style="color: #28a745; font-weight: 500;">${passed}</td>
+                <td style="color: #dc3545; font-weight: 500;">${failedChecks}</td>
+                <td><strong>${compliance}%</strong></td>
+                <td>${reportLinks}</td>`;
+            tbody.appendChild(trOverview);
+        });
+
+        // Update KPI cards
+        document.getElementById('kpi-total').innerText = total;
+        document.getElementById('kpi-running').innerText = running;
+        document.getElementById('kpi-completed').innerText = completed;
+        document.getElementById('kpi-failed').innerText = failed;
+
+    } catch (error) {
+        console.error('Error refreshing audit data:', error);
+    }
+}
+
+// Function to refresh active audits
+async function refreshActiveAudits() {
+    try {
+        const res = await fetch('/api/audits/active');
+        if (!res.ok) throw new Error('Failed to fetch active audits');
+        
+        const data = await res.json();
+        const activeDiv = document.getElementById('active-audits');
+        
+        const runningAudits = data.audits.filter(a => a.status === 'running');
+        
+        if (runningAudits.length === 0) {
+            activeDiv.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No active audits currently running.</p>';
+            return;
+        }
+
+        let html = '<div style="display: grid; gap: 15px;">';
+        runningAudits.forEach(audit => {
+            html += `
+            <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0 0 5px 0; color: #495057;">${audit.target}</h4>
+                        <p style="margin: 0; color: #6c757d; font-size: 0.9em;">
+                            ${audit.os} ${audit.level ? '• ' + audit.level : ''} • Started: ${audit.start_time || 'Unknown'}
+                        </p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">
+                            ⏳ RUNNING
+                        </span>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: linear-gradient(90deg, #ffc107, #fd7e14); width: 60%; animation: progress 2s ease-in-out infinite;"></div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        
+        activeDiv.innerHTML = html;
+    } catch (error) {
+        console.error('Error refreshing active audits:', error);
+        document.getElementById('active-audits').innerHTML = '<p style="color: #dc3545;">Error loading active audits.</p>';
+    }
+}
+
+// Handle single audit form submission
+document.getElementById('single-audit-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Starting...';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(this);
+    const data = {
+        ip: formData.get('ip'),
+        username: formData.get('username'),
+        key: formData.get('key'),
+        os: formData.get('os'),
+        level: formData.get('level')
+    };
+
+    try {
+        const response = await fetch('/api/audit/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Audit started successfully for ${data.ip}!\n\nAudit ID: ${result.audit.id}\nStatus: ${result.audit.status.toUpperCase()}`);
+            this.reset();
+            refreshRecentAudits();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Unknown error occurred'));
+        }
+    } catch (error) {
+        console.error('Error starting audit:', error);
+        alert('❌ Error starting audit: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Handle batch form submission
+document.getElementById('batch-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Uploading...';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch('/api/audit/batch', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Batch upload successful!\n\nFile: ${result.batch_file}\nAudits Created: ${result.total_created}\n\nAll audits are now running in the background.`);
+            this.reset();
+            refreshRecentAudits();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Unknown error occurred'));
+        }
+    } catch (error) {
+        console.error('Error uploading batch:', error);
+        alert('❌ Error uploading batch: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Handle schedule form submission
+document.getElementById('schedule-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Scheduling...';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch('/api/schedule', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            const scheduleTime = `${formData.get('date')} at ${formData.get('time')}`;
+            alert(`✅ Audit scheduled successfully!\n\nScheduled for: ${scheduleTime}\nTarget: ${result.created.target}`);
+            this.reset();
+            refreshScheduledAudits();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Unknown error occurred'));
+        }
+    } catch (error) {
+        console.error('Error scheduling audit:', error);
+        alert('❌ Error scheduling audit: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Function to refresh scheduled audits
+async function refreshScheduledAudits() {
+    try {
+        const res = await fetch('/api/schedule');
+        if (!res.ok) throw new Error('Failed to fetch schedules');
+        
+        const data = await res.json();
+        const tbody = document.querySelector('#scheduled-audits tbody');
+        tbody.innerHTML = '';
+
+        if (data.schedules && data.schedules.length > 0) {
+            data.schedules.forEach(schedule => {
+                const tr = document.createElement('tr');
+                const scheduleDateTime = new Date(`${schedule.date}T${schedule.time}`);
+                const isUpcoming = scheduleDateTime > new Date();
+                
+                tr.innerHTML = `
+                    <td>${schedule.target}</td>
+                    <td>${schedule.date}</td>
+                    <td>${schedule.time}</td>
+                    <td>
+                        ${isUpcoming ? 
+                            `<span class="action-btn" onclick="editScheduled('${schedule.id}')" style="color: #007bff;">Edit</span>
+                            <span class="action-btn" onclick="deleteScheduled('${schedule.id}')" style="color: #dc3545;">Delete</span>` :
+                            '<span style="color: #6c757d;">Past</span>'
+                        }
+                    </td>`;
+                
+                // Style past schedules differently
+                if (!isUpcoming) {
+                    tr.style.opacity = '0.6';
+                    tr.style.fontStyle = 'italic';
+                }
+                
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #6c757d; font-style: italic;">No scheduled audits.</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error refreshing scheduled audits:', error);
+        const tbody = document.querySelector('#scheduled-audits tbody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #dc3545;">Error loading scheduled audits.</td></tr>';
+    }
+}
+
+// Enhanced delete function for scheduled audits
+async function deleteScheduled(scheduleId) {
+    if (confirm('Are you sure you want to delete this scheduled audit?')) {
+        try {
+            const response = await fetch(`/api/schedule/${scheduleId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+            if (result.deleted) {
+                alert('✅ Scheduled audit deleted successfully.');
+                refreshScheduledAudits();
+            } else {
+                alert('❌ Error deleting schedule');
+            }
+        } catch (error) {
+            console.error('Error deleting schedule:', error);
+            alert('❌ Error: ' + error.message);
+        }
+    }
+}
+
+// Placeholder function for edit (you can enhance this)
+function editScheduled(scheduleId) {
+    alert('Edit functionality not yet implemented. You can delete and recreate the schedule.');
+}
+
+// Auto-refresh functionality
+function startAutoRefresh() {
+    // Refresh every 5 seconds
+    setInterval(refreshRecentAudits, 5000);
+    
+    // Refresh active audits more frequently if on active page
+    setInterval(() => {
+        const activePage = document.querySelector('.page.active');
+        if (activePage && activePage.id === 'active') {
+            refreshActiveAudits();
+        }
+    }, 3000);
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial data load
+    refreshRecentAudits();
+    
+    // Start auto-refresh
+    startAutoRefresh();
+    
+    console.log('CIS Security Auditor UI initialized');
+});
+
+// Add some CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes progress {
+        0%, 100% { width: 30%; }
+        50% { width: 70%; }
+    }
+    
+    .status-completed { color: #28a745 !important; font-weight: 600; }
+    .status-running { color: #ffc107 !important; font-weight: 600; }
+    .status-failed { color: #dc3545 !important; font-weight: 600; }
+    .status-pending { color: #6c757d !important; font-weight: 600; }
+    
+    .action-btn:hover {
+        text-decoration: underline !important;
+        opacity: 0.8;
+    }
+    
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+`;
+document.head.appendChild(style);
+  </script>
+</body>
+</html>

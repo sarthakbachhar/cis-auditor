@@ -1,0 +1,518 @@
+---
+- name: "CIS Windows Server Audit"
+  hosts: all
+  gather_facts: yes
+  
+  tasks:
+    # 1.1.1 Ensure 'Enforce password history' is set to '24 or more password(s)'
+    - name: "CIS 1.1.1 | Check password history policy"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" -Name "PasswordHistorySize" -ErrorAction SilentlyContinue
+        if ($policy.PasswordHistorySize -ge 24) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: password_history_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.1 | Result: Pass if password history is 24 or more"
+      debug:
+        msg: "Compliant: Password history is set to 24 or more passwords."
+      when: password_history_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 1.1.1 | Result: Fail if password history is less than 24"
+      fail:
+        msg: "Remediation: Set 'Enforce password history' to 24 or more in Group Policy"
+      when: password_history_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 1.1.2 Ensure 'Maximum password age' is set to '365 or fewer days, but not 0'
+    - name: "CIS 1.1.2 | Check maximum password age"
+      win_shell: |
+        $policy = net accounts | Select-String "Maximum password age"
+        $days = ($policy -split ":")[1].Trim() -replace " days", ""
+        if ($days -gt 0 -and $days -le 365) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: max_password_age_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.2 | Result: Pass if maximum password age is between 1-365 days"
+      debug:
+        msg: "Compliant: Maximum password age is set appropriately."
+      when: max_password_age_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 1.1.2 | Result: Fail if maximum password age is not between 1-365 days"
+      fail:
+        msg: "Remediation: Set 'Maximum password age' to 365 or fewer days (but not 0) in Group Policy"
+      when: max_password_age_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 1.1.3 Ensure 'Minimum password age' is set to '1 or more day(s)'
+    - name: "CIS 1.1.3 | Check minimum password age"
+      win_shell: |
+        $policy = net accounts | Select-String "Minimum password age"
+        $days = ($policy -split ":")[1].Trim() -replace " days", ""
+        if ([int]$days -ge 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: min_password_age_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.3 | Result: Pass if minimum password age is 1 or more days"
+      debug:
+        msg: "Compliant: Minimum password age is set to 1 or more days."
+      when: min_password_age_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 1.1.3 | Result: Fail if minimum password age is less than 1 day"
+      fail:
+        msg: "Remediation: Set 'Minimum password age' to 1 or more days in Group Policy"
+      when: min_password_age_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 1.1.4 Ensure 'Minimum password length' is set to '14 or more character(s)'
+    - name: "CIS 1.1.4 | Check minimum password length"
+      win_shell: |
+        $policy = net accounts | Select-String "Minimum password length"
+        $length = ($policy -split ":")[1].Trim()
+        if ([int]$length -ge 14) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: min_password_length_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.4 | Result: Pass if minimum password length is 14 or more"
+      debug:
+        msg: "Compliant: Minimum password length is set to 14 or more characters."
+      when: min_password_length_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 1.1.4 | Result: Fail if minimum password length is less than 14"
+      fail:
+        msg: "Remediation: Set 'Minimum password length' to 14 or more characters in Group Policy"
+      when: min_password_length_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 1.1.5 Ensure 'Password must meet complexity requirements' is set to 'Enabled'
+    - name: "CIS 1.1.5 | Check password complexity requirements"
+      win_shell: |
+        $secedit = secedit /export /cfg $env:temp\secpol.cfg
+        $complexity = Get-Content $env:temp\secpol.cfg | Select-String "PasswordComplexity"
+        Remove-Item $env:temp\secpol.cfg -Force
+        if ($complexity -match "PasswordComplexity = 1") {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: password_complexity_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.5 | Result: Pass if password complexity is enabled"
+      debug:
+        msg: "Compliant: Password complexity requirements are enabled."
+      when: password_complexity_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 1.1.5 | Result: Fail if password complexity is not enabled"
+      fail:
+        msg: "Remediation: Enable 'Password must meet complexity requirements' in Group Policy"
+      when: password_complexity_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.2.1 Ensure 'Access Credential Manager as a trusted caller' is set to 'No One'
+    - name: "CIS 2.2.1 | Check Access Credential Manager privilege"
+      win_shell: |
+        $policy = secedit /export /cfg $env:temp\secpol.cfg
+        $privilege = Get-Content $env:temp\secpol.cfg | Select-String "SeTrustedCredManAccessPrivilege"
+        Remove-Item $env:temp\secpol.cfg -Force
+        if ($privilege -match "SeTrustedCredManAccessPrivilege = $" -or $privilege -eq $null) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: credman_privilege_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.2.1 | Result: Pass if Access Credential Manager is set to No One"
+      debug:
+        msg: "Compliant: Access Credential Manager privilege is set to No One."
+      when: credman_privilege_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.2.1 | Result: Fail if Access Credential Manager is not set to No One"
+      fail:
+        msg: "Remediation: Set 'Access Credential Manager as a trusted caller' to 'No One' in Group Policy"
+      when: credman_privilege_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.2.2 Ensure 'Access this computer from the network' is configured
+    - name: "CIS 2.2.2 | Check Access this computer from network privilege"
+      win_shell: |
+        $policy = secedit /export /cfg $env:temp\secpol.cfg
+        $privilege = Get-Content $env:temp\secpol.cfg | Select-String "SeNetworkLogonRight"
+        Remove-Item $env:temp\secpol.cfg -Force
+        if ($privilege -match "Administrators") {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: network_logon_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.2.2 | Result: Pass if Access this computer from network is configured"
+      debug:
+        msg: "Compliant: Access this computer from network is properly configured."
+      when: network_logon_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.2.2 | Result: Fail if Access this computer from network is not configured"
+      fail:
+        msg: "Remediation: Configure 'Access this computer from the network' to include only necessary accounts"
+      when: network_logon_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.1.1 Ensure 'Accounts: Administrator account status' is set to 'Disabled'
+    - name: "CIS 2.3.1.1 | Check Administrator account status"
+      win_shell: |
+        $admin = Get-LocalUser -Name "Administrator" -ErrorAction SilentlyContinue
+        if ($admin.Enabled -eq $false) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: admin_account_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.1.1 | Result: Pass if Administrator account is disabled"
+      debug:
+        msg: "Compliant: Administrator account is disabled."
+      when: admin_account_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.1.1 | Result: Fail if Administrator account is enabled"
+      fail:
+        msg: "Remediation: Disable the built-in Administrator account in Group Policy"
+      when: admin_account_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.1.2 Ensure 'Accounts: Guest account status' is set to 'Disabled'
+    - name: "CIS 2.3.1.2 | Check Guest account status"
+      win_shell: |
+        $guest = Get-LocalUser -Name "Guest" -ErrorAction SilentlyContinue
+        if ($guest.Enabled -eq $false) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: guest_account_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.1.2 | Result: Pass if Guest account is disabled"
+      debug:
+        msg: "Compliant: Guest account is disabled."
+      when: guest_account_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.1.2 | Result: Fail if Guest account is enabled"
+      fail:
+        msg: "Remediation: Disable the Guest account in Group Policy"
+      when: guest_account_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.4.1 Ensure 'Devices: Prevent users from installing printer drivers' is set to 'Enabled'
+    - name: "CIS 2.3.4.1 | Check printer driver installation policy"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers" -Name "AddPrinterDrivers" -ErrorAction SilentlyContinue
+        if ($policy.AddPrinterDrivers -eq 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: printer_driver_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.4.1 | Result: Pass if printer driver installation is restricted"
+      debug:
+        msg: "Compliant: Users are prevented from installing printer drivers."
+      when: printer_driver_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.4.1 | Result: Fail if printer driver installation is not restricted"
+      fail:
+        msg: "Remediation: Enable 'Devices: Prevent users from installing printer drivers' in Group Policy"
+      when: printer_driver_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.6.1 Ensure 'Domain member: Digitally encrypt or sign secure channel data (always)' is set to 'Enabled'
+    - name: "CIS 2.3.6.1 | Check secure channel encryption"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" -Name "RequireSignOrSeal" -ErrorAction SilentlyContinue
+        if ($policy.RequireSignOrSeal -eq 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: secure_channel_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.6.1 | Result: Pass if secure channel encryption is enabled"
+      debug:
+        msg: "Compliant: Secure channel data is digitally encrypted or signed."
+      when: secure_channel_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.6.1 | Result: Fail if secure channel encryption is not enabled"
+      fail:
+        msg: "Remediation: Enable 'Domain member: Digitally encrypt or sign secure channel data (always)' in Group Policy"
+      when: secure_channel_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.10.1 Ensure 'Network access: Allow anonymous SID/Name translation' is set to 'Disabled'
+    - name: "CIS 2.3.10.1 | Check anonymous SID/Name translation"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "TurnOffAnonymousBlock" -ErrorAction SilentlyContinue
+        if ($policy.TurnOffAnonymousBlock -eq 1) {
+          Write-Output "NON_COMPLIANT"
+        } else {
+          Write-Output "COMPLIANT"
+        }
+      register: anonymous_sid_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.10.1 | Result: Pass if anonymous SID/Name translation is disabled"
+      debug:
+        msg: "Compliant: Anonymous SID/Name translation is disabled."
+      when: anonymous_sid_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.10.1 | Result: Fail if anonymous SID/Name translation is enabled"
+      fail:
+        msg: "Remediation: Disable 'Network access: Allow anonymous SID/Name translation' in Group Policy"
+      when: anonymous_sid_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.3.11.1 Ensure 'Network security: Allow Local System to use computer identity for NTLM' is set to 'Enabled'
+    - name: "CIS 2.3.11.1 | Check Local System NTLM identity"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "UseMachineId" -ErrorAction SilentlyContinue
+        if ($policy.UseMachineId -eq 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: ntlm_identity_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.3.11.1 | Result: Pass if Local System NTLM identity is enabled"
+      debug:
+        msg: "Compliant: Local System can use computer identity for NTLM."
+      when: ntlm_identity_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 2.3.11.1 | Result: Fail if Local System NTLM identity is not enabled"
+      fail:
+        msg: "Remediation: Enable 'Network security: Allow Local System to use computer identity for NTLM' in Group Policy"
+      when: ntlm_identity_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 5.1 Ensure 'Print Spooler (Spooler)' is set to 'Disabled or Not Installed'
+    - name: "CIS 5.1 | Check Print Spooler service"
+      win_shell: |
+        $service = Get-Service -Name "Spooler" -ErrorAction SilentlyContinue
+        if ($service.StartType -eq "Disabled" -or $service -eq $null) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: spooler_service_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.1 | Result: Pass if Print Spooler is disabled"
+      debug:
+        msg: "Compliant: Print Spooler service is disabled."
+      when: spooler_service_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 5.1 | Result: Fail if Print Spooler is not disabled"
+      fail:
+        msg: "Remediation: Disable Print Spooler service if not needed: Set-Service -Name Spooler -StartupType Disabled"
+      when: spooler_service_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 9.1.1 Ensure 'Windows Firewall: Domain: Firewall state' is set to 'On'
+    - name: "CIS 9.1.1 | Check Windows Firewall Domain profile"
+      win_shell: |
+        $firewall = Get-NetFirewallProfile -Profile Domain
+        if ($firewall.Enabled -eq $true) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: firewall_domain_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 9.1.1 | Result: Pass if Windows Firewall Domain profile is on"
+      debug:
+        msg: "Compliant: Windows Firewall Domain profile is enabled."
+      when: firewall_domain_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 9.1.1 | Result: Fail if Windows Firewall Domain profile is off"
+      fail:
+        msg: "Remediation: Enable Windows Firewall for Domain profile in Group Policy"
+      when: firewall_domain_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 9.2.1 Ensure 'Windows Firewall: Private: Firewall state' is set to 'On'
+    - name: "CIS 9.2.1 | Check Windows Firewall Private profile"
+      win_shell: |
+        $firewall = Get-NetFirewallProfile -Profile Private
+        if ($firewall.Enabled -eq $true) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: firewall_private_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 9.2.1 | Result: Pass if Windows Firewall Private profile is on"
+      debug:
+        msg: "Compliant: Windows Firewall Private profile is enabled."
+      when: firewall_private_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 9.2.1 | Result: Fail if Windows Firewall Private profile is off"
+      fail:
+        msg: "Remediation: Enable Windows Firewall for Private profile in Group Policy"
+      when: firewall_private_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 9.3.1 Ensure 'Windows Firewall: Public: Firewall state' is set to 'On'
+    - name: "CIS 9.3.1 | Check Windows Firewall Public profile"
+      win_shell: |
+        $firewall = Get-NetFirewallProfile -Profile Public
+        if ($firewall.Enabled -eq $true) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: firewall_public_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 9.3.1 | Result: Pass if Windows Firewall Public profile is on"
+      debug:
+        msg: "Compliant: Windows Firewall Public profile is enabled."
+      when: firewall_public_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 9.3.1 | Result: Fail if Windows Firewall Public profile is off"
+      fail:
+        msg: "Remediation: Enable Windows Firewall for Public profile in Group Policy"
+      when: firewall_public_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 18.1.1.1 Ensure 'Prevent enabling lock screen camera' is set to 'Enabled'
+    - name: "CIS 18.1.1.1 | Check lock screen camera policy"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreenCamera" -ErrorAction SilentlyContinue
+        if ($policy.NoLockScreenCamera -eq 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: lockscreen_camera_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 18.1.1.1 | Result: Pass if lock screen camera is disabled"
+      debug:
+        msg: "Compliant: Lock screen camera is disabled."
+      when: lockscreen_camera_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 18.1.1.1 | Result: Fail if lock screen camera is not disabled"
+      fail:
+        msg: "Remediation: Enable 'Prevent enabling lock screen camera' in Group Policy"
+      when: lockscreen_camera_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 18.1.1.2 Ensure 'Prevent enabling lock screen slide show' is set to 'Enabled'
+    - name: "CIS 18.1.1.2 | Check lock screen slide show policy"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreenSlideshow" -ErrorAction SilentlyContinue
+        if ($policy.NoLockScreenSlideshow -eq 1) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: lockscreen_slideshow_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 18.1.1.2 | Result: Pass if lock screen slide show is disabled"
+      debug:
+        msg: "Compliant: Lock screen slide show is disabled."
+      when: lockscreen_slideshow_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 18.1.1.2 | Result: Fail if lock screen slide show is not disabled"
+      fail:
+        msg: "Remediation: Enable 'Prevent enabling lock screen slide show' in Group Policy"
+      when: lockscreen_slideshow_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 18.8.3.1 Ensure 'Include command line in process creation events' is set to 'Disabled'
+    - name: "CIS 18.8.3.1 | Check command line logging policy"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit" -Name "ProcessCreationIncludeCmdLine_Enabled" -ErrorAction SilentlyContinue
+        if ($policy.ProcessCreationIncludeCmdLine_Enabled -eq 0 -or $policy -eq $null) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: cmdline_logging_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 18.8.3.1 | Result: Pass if command line logging is disabled"
+      debug:
+        msg: "Compliant: Command line process creation logging is disabled."
+      when: cmdline_logging_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 18.8.3.1 | Result: Fail if command line logging is enabled"
+      fail:
+        msg: "Remediation: Disable 'Include command line in process creation events' in Group Policy"
+      when: cmdline_logging_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes
+
+    # 18.9.6.1 Ensure 'Allow Basic authentication' is set to 'Disabled'
+    - name: "CIS 18.9.6.1 | Check WinRM Basic authentication"
+      win_shell: |
+        $policy = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Client" -Name "AllowBasic" -ErrorAction SilentlyContinue
+        if ($policy.AllowBasic -eq 0 -or $policy -eq $null) {
+          Write-Output "COMPLIANT"
+        } else {
+          Write-Output "NON_COMPLIANT"
+        }
+      register: winrm_basic_auth_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 18.9.6.1 | Result: Pass if WinRM Basic authentication is disabled"
+      debug:
+        msg: "Compliant: WinRM Basic authentication is disabled."
+      when: winrm_basic_auth_check.stdout_lines[0] == "COMPLIANT"
+
+    - name: "CIS 18.9.6.1 | Result: Fail if WinRM Basic authentication is enabled"
+      fail:
+        msg: "Remediation: Disable 'Allow Basic authentication' for WinRM Client in Group Policy"
+      when: winrm_basic_auth_check.stdout_lines[0] != "COMPLIANT"
+      ignore_errors: yes

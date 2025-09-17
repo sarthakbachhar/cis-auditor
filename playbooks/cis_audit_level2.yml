@@ -1,0 +1,1568 @@
+---
+- name: "CIS Level 2 Ubuntu Server Audit"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    # 1.1.10 Ensure noexec option set on /var/tmp partition
+    - name: "CIS 1.1.10 | L2 | Check noexec option on /var/tmp"
+      shell: |
+        if mount | grep -E '\s/var/tmp\s.*noexec' > /dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: var_tmp_noexec_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.10 | L2 | Result: Pass if /var/tmp has noexec option"
+      debug:
+        msg: "Compliant: /var/tmp partition has noexec option set."
+      when: var_tmp_noexec_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.1.10 | L2 | Result: Fail if /var/tmp missing noexec option"
+      fail:
+        msg: "Remediation: Edit /etc/fstab and add noexec option to /var/tmp mount"
+      when: var_tmp_noexec_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.1.15 Ensure nodev option set on /dev/shm partition
+    - name: "CIS 1.1.15 | L2 | Check nodev option on /dev/shm"
+      shell: |
+        if mount | grep -E '\s/dev/shm\s.*nodev' > /dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: dev_shm_nodev_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.15 | L2 | Result: Pass if /dev/shm has nodev option"
+      debug:
+        msg: "Compliant: /dev/shm partition has nodev option set."
+      when: dev_shm_nodev_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.1.15 | L2 | Result: Fail if /dev/shm missing nodev option"
+      fail:
+        msg: "Remediation: Edit /etc/fstab and add nodev option to /dev/shm mount"
+      when: dev_shm_nodev_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.1.16 Ensure nosuid option set on /dev/shm partition
+    - name: "CIS 1.1.16 | L2 | Check nosuid option on /dev/shm"
+      shell: |
+        if mount | grep -E '\s/dev/shm\s.*nosuid' > /dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: dev_shm_nosuid_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.16 | L2 | Result: Pass if /dev/shm has nosuid option"
+      debug:
+        msg: "Compliant: /dev/shm partition has nosuid option set."
+      when: dev_shm_nosuid_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.1.16 | L2 | Result: Fail if /dev/shm missing nosuid option"
+      fail:
+        msg: "Remediation: Edit /etc/fstab and add nosuid option to /dev/shm mount"
+      when: dev_shm_nosuid_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.1.17 Ensure noexec option set on /dev/shm partition
+    - name: "CIS 1.1.17 | L2 | Check noexec option on /dev/shm"
+      shell: |
+        if mount | grep -E '\s/dev/shm\s.*noexec' > /dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: dev_shm_noexec_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.17 | L2 | Result: Pass if /dev/shm has noexec option"
+      debug:
+        msg: "Compliant: /dev/shm partition has noexec option set."
+      when: dev_shm_noexec_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.1.17 | L2 | Result: Fail if /dev/shm missing noexec option"
+      fail:
+        msg: "Remediation: Edit /etc/fstab and add noexec option to /dev/shm mount"
+      when: dev_shm_noexec_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.1.22 Ensure sticky bit is set on all world-writable directories
+    - name: "CIS 1.1.22 | L2 | Check sticky bit on world-writable directories"
+      shell: |
+        df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -type d \( -perm -0002 -a ! -perm -1000 \) 2>/dev/null | wc -l
+      register: sticky_bit_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.22 | L2 | Result: Pass if sticky bit is set on all world-writable directories"
+      debug:
+        msg: "Compliant: Sticky bit is set on all world-writable directories."
+      when: sticky_bit_check.stdout|int == 0
+
+    - name: "CIS 1.1.22 | L2 | Result: Fail if sticky bit missing on world-writable directories"
+      fail:
+        msg: "Remediation: {{ sticky_bit_check.stdout }} directories missing sticky bit. Run 'chmod +t' on world-writable directories"
+      when: sticky_bit_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 1.1.23 Disable Automounting
+    - name: "CIS 1.1.23 | L2 | Check autofs is disabled"
+      systemd:
+        name: autofs
+        enabled: no
+      check_mode: yes
+      register: autofs_check
+      failed_when: false
+
+    - name: "CIS 1.1.23 | L2 | Result: Pass if autofs is disabled"
+      debug:
+        msg: "Compliant: autofs service is disabled."
+      when: not autofs_check.changed
+
+    - name: "CIS 1.1.23 | L2 | Result: Fail if autofs is enabled"
+      fail:
+        msg: "Remediation: Disable autofs with 'systemctl disable autofs'"
+      when: autofs_check.changed
+      ignore_errors: yes
+
+    # 1.1.24 Disable USB Storage
+    - name: "CIS 1.1.24 | L2 | Check USB storage is disabled"
+      shell: |
+        if lsmod | grep usb-storage > /dev/null 2>&1; then
+          echo "LOADED"
+        elif modprobe -n -v usb-storage 2>&1 | grep -E "(install /bin/true|blacklist usb-storage)" > /dev/null; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: usb_storage_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.1.24 | L2 | Result: Pass if USB storage is disabled"
+      debug:
+        msg: "Compliant: USB storage module is disabled."
+      when: usb_storage_check.stdout == "DISABLED"
+
+    - name: "CIS 1.1.24 | L2 | Result: Fail if USB storage is not disabled"
+      fail:
+        msg: "Remediation: Run 'echo install usb-storage /bin/true >> /etc/modprobe.d/CIS.conf' and 'rmmod usb-storage'"
+      when: usb_storage_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 1.3.2 Ensure filesystem integrity is regularly checked
+    - name: "CIS 1.3.2 | L2 | Check AIDE is installed"
+      package:
+        name: aide
+        state: present
+      check_mode: yes
+      register: aide_check
+      failed_when: false
+
+    - name: "CIS 1.3.2 | L2 | Check AIDE cron job exists"
+      shell: |
+        if crontab -l 2>/dev/null | grep aide > /dev/null || find /etc/cron* -name "*aide*" 2>/dev/null | grep -q aide; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: aide_cron_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.3.2 | L2 | Result: Pass if AIDE is properly configured"
+      debug:
+        msg: "Compliant: AIDE is installed and scheduled for regular checks."
+      when: not aide_check.changed and aide_cron_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.3.2 | L2 | Result: Fail if AIDE is not properly configured"
+      fail:
+        msg: "Remediation: Install aide and configure periodic checks with 'apt install aide && aideinit && crontab -e'"
+      when: aide_check.changed or aide_cron_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.4.1 Ensure permissions on bootloader config are configured
+    - name: "CIS 1.4.1 | L2 | Check GRUB config permissions"
+      stat:
+        path: "/boot/grub/grub.cfg"
+      register: grub_stat
+
+    - name: "CIS 1.4.1 | L2 | Result: Pass if GRUB config permissions are correct"
+      debug:
+        msg: "Compliant: GRUB config has correct permissions and ownership."
+      when: grub_stat.stat.exists and grub_stat.stat.mode == '0400' and grub_stat.stat.pw_name == 'root' and grub_stat.stat.gr_name == 'root'
+
+    - name: "CIS 1.4.1 | L2 | Result: Fail if GRUB config permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /boot/grub/grub.cfg && chmod 400 /boot/grub/grub.cfg'"
+      when: not grub_stat.stat.exists or grub_stat.stat.mode != '0400' or grub_stat.stat.pw_name != 'root' or grub_stat.stat.gr_name != 'root'
+      ignore_errors: yes
+
+    # 1.4.2 Ensure bootloader password is set
+    - name: "CIS 1.4.2 | L2 | Check bootloader password is set"
+      shell: |
+        if grep -q "password" /boot/grub/grub.cfg 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: grub_password_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.4.2 | L2 | Result: Pass if bootloader password is set"
+      debug:
+        msg: "Compliant: Bootloader password is configured."
+      when: grub_password_check.stdout == "CONFIGURED"
+
+    - name: "CIS 1.4.2 | L2 | Result: Fail if bootloader password is not set"
+      fail:
+        msg: "Remediation: Set GRUB password with 'grub-mkpasswd-pbkdf2' and update /etc/grub.d/40_custom"
+      when: grub_password_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 1.5.3 Ensure address space layout randomization (ASLR) is enabled
+    - name: "CIS 1.5.3 | L2 | Check ASLR is enabled"
+      shell: |
+        aslr_value=$(sysctl kernel.randomize_va_space 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$aslr_value" = "2" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: aslr_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.5.3 | L2 | Result: Pass if ASLR is enabled"
+      debug:
+        msg: "Compliant: Address space layout randomization is enabled."
+      when: aslr_check.stdout == "ENABLED"
+
+    - name: "CIS 1.5.3 | L2 | Result: Fail if ASLR is not enabled"
+      fail:
+        msg: "Remediation: Set 'kernel.randomize_va_space = 2' in /etc/sysctl.conf and run 'sysctl -w kernel.randomize_va_space=2'"
+      when: aslr_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 1.6.1.1 Ensure AppArmor is installed
+    - name: "CIS 1.6.1.1 | L2 | Check AppArmor is installed"
+      package:
+        name: apparmor
+        state: present
+      check_mode: yes
+      register: apparmor_check
+      failed_when: false
+
+    - name: "CIS 1.6.1.1 | L2 | Result: Pass if AppArmor is installed"
+      debug:
+        msg: "Compliant: AppArmor is installed."
+      when: not apparmor_check.changed
+
+    - name: "CIS 1.6.1.1 | L2 | Result: Fail if AppArmor is not installed"
+      fail:
+        msg: "Remediation: Install AppArmor with 'apt install apparmor apparmor-utils'"
+      when: apparmor_check.changed
+      ignore_errors: yes
+
+    # 1.6.1.2 Ensure AppArmor is enabled in the bootloader configuration
+    - name: "CIS 1.6.1.2 | L2 | Check AppArmor is enabled in bootloader"
+      shell: |
+        if grep -q "apparmor=1" /boot/grub/grub.cfg 2>/dev/null && grep -q "security=apparmor" /boot/grub/grub.cfg 2>/dev/null; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: apparmor_boot_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.6.1.2 | L2 | Result: Pass if AppArmor is enabled in bootloader"
+      debug:
+        msg: "Compliant: AppArmor is enabled in bootloader configuration."
+      when: apparmor_boot_check.stdout == "ENABLED"
+
+    - name: "CIS 1.6.1.2 | L2 | Result: Fail if AppArmor is not enabled in bootloader"
+      fail:
+        msg: "Remediation: Add 'apparmor=1 security=apparmor' to GRUB_CMDLINE_LINUX in /etc/default/grub and run 'update-grub'"
+      when: apparmor_boot_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 1.6.1.3 Ensure all AppArmor Profiles are in enforce or complain mode
+    - name: "CIS 1.6.1.3 | L2 | Check AppArmor profiles mode"
+      shell: |
+        unconfined_count=$(apparmor_status 2>/dev/null | grep -c "processes are unconfined" || echo "0")
+        if [ "$unconfined_count" -eq 0 ]; then
+          echo "COMPLIANT"
+        else
+          echo "NON_COMPLIANT"
+        fi
+      register: apparmor_profiles_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1.6.1.3 | L2 | Result: Pass if all AppArmor profiles are enforced"
+      debug:
+        msg: "Compliant: All AppArmor profiles are in enforce or complain mode."
+      when: apparmor_profiles_check.stdout == "COMPLIANT"
+
+    - name: "CIS 1.6.1.3 | L2 | Result: Fail if unconfined processes exist"
+      fail:
+        msg: "Remediation: Enable AppArmor profiles with 'aa-enforce /etc/apparmor.d/*' or use aa-complain mode"
+      when: apparmor_profiles_check.stdout != "COMPLIANT"
+      ignore_errors: yes
+
+    # 1.7.1.4 Ensure permissions on /etc/motd are configured
+    - name: "CIS 1.7.1.4 | L2 | Check /etc/motd permissions"
+      stat:
+        path: "/etc/motd"
+      register: motd_stat
+
+    - name: "CIS 1.7.1.4 | L2 | Result: Pass if /etc/motd permissions are correct"
+      debug:
+        msg: "Compliant: /etc/motd has correct permissions and ownership."
+      when: motd_stat.stat.exists and motd_stat.stat.mode == '0644' and motd_stat.stat.pw_name == 'root' and motd_stat.stat.gr_name == 'root'
+
+    - name: "CIS 1.7.1.4 | L2 | Result: Fail if /etc/motd permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /etc/motd && chmod 644 /etc/motd'"
+      when: motd_stat.stat.exists and (motd_stat.stat.mode != '0644' or motd_stat.stat.pw_name != 'root' or motd_stat.stat.gr_name != 'root')
+      ignore_errors: yes
+
+    # 2.2.1.1 Ensure time synchronization is in use
+    - name: "CIS 2.2.1.1 | L2 | Check time synchronization service"
+      shell: |
+        if systemctl is-enabled systemd-timesyncd 2>/dev/null | grep -q enabled || systemctl is-enabled ntp 2>/dev/null | grep -q enabled || systemctl is-enabled chrony 2>/dev/null | grep -q enabled; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: time_sync_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.2.1.1 | L2 | Result: Pass if time synchronization is enabled"
+      debug:
+        msg: "Compliant: Time synchronization service is enabled."
+      when: time_sync_check.stdout == "ENABLED"
+
+    - name: "CIS 2.2.1.1 | L2 | Result: Fail if time synchronization is not enabled"
+      fail:
+        msg: "Remediation: Install and enable a time synchronization service (systemd-timesyncd, ntp, or chrony)"
+      when: time_sync_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 2.2.2 Ensure X Window System is not installed
+    - name: "CIS 2.2.2 | L2 | Check X Window System is not installed"
+      shell: |
+        if dpkg -l | grep -q xserver-xorg; then
+          echo "INSTALLED"
+        else
+          echo "NOT_INSTALLED"
+        fi
+      register: xwindow_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.2.2 | L2 | Result: Pass if X Window System is not installed"
+      debug:
+        msg: "Compliant: X Window System is not installed."
+      when: xwindow_check.stdout == "NOT_INSTALLED"
+
+    - name: "CIS 2.2.2 | L2 | Result: Fail if X Window System is installed"
+      fail:
+        msg: "Remediation: Remove X Window System with 'apt purge xserver-xorg*'"
+      when: xwindow_check.stdout != "NOT_INSTALLED"
+      ignore_errors: yes
+
+    # 2.2.3 Ensure Avahi Server is not enabled
+    - name: "CIS 2.2.3 | L2 | Check Avahi daemon is not enabled"
+      systemd:
+        name: avahi-daemon
+        enabled: no
+      check_mode: yes
+      register: avahi_check
+      failed_when: false
+
+    - name: "CIS 2.2.3 | L2 | Result: Pass if Avahi daemon is not enabled"
+      debug:
+        msg: "Compliant: Avahi daemon is not enabled."
+      when: not avahi_check.changed
+
+    - name: "CIS 2.2.3 | L2 | Result: Fail if Avahi daemon is enabled"
+      fail:
+        msg: "Remediation: Disable Avahi daemon with 'systemctl disable avahi-daemon'"
+      when: avahi_check.changed
+      ignore_errors: yes
+
+    # 2.2.4 Ensure CUPS is not enabled
+    - name: "CIS 2.2.4 | L2 | Check CUPS service is not enabled"
+      systemd:
+        name: cups
+        enabled: no
+      check_mode: yes
+      register: cups_check
+      failed_when: false
+
+    - name: "CIS 2.2.4 | L2 | Result: Pass if CUPS is not enabled"
+      debug:
+        msg: "Compliant: CUPS service is not enabled."
+      when: not cups_check.changed
+
+    - name: "CIS 2.2.4 | L2 | Result: Fail if CUPS is enabled"
+      fail:
+        msg: "Remediation: Disable CUPS with 'systemctl disable cups'"
+      when: cups_check.changed
+      ignore_errors: yes
+
+    # 2.2.5 Ensure DHCP Server is not enabled
+    - name: "CIS 2.2.5 | L2 | Check DHCP server is not enabled"
+      systemd:
+        name: isc-dhcp-server
+        enabled: no
+      check_mode: yes
+      register: dhcp_check
+      failed_when: false
+
+    - name: "CIS 2.2.5 | L2 | Result: Pass if DHCP server is not enabled"
+      debug:
+        msg: "Compliant: DHCP server is not enabled."
+      when: not dhcp_check.changed
+
+    - name: "CIS 2.2.5 | L2 | Result: Fail if DHCP server is enabled"
+      fail:
+        msg: "Remediation: Disable DHCP server with 'systemctl disable isc-dhcp-server'"
+      when: dhcp_check.changed
+      ignore_errors: yes
+
+    # 2.2.6 Ensure LDAP server is not enabled
+    - name: "CIS 2.2.6 | L2 | Check LDAP server is not enabled"
+      systemd:
+        name: slapd
+        enabled: no
+      check_mode: yes
+      register: ldap_check
+      failed_when: false
+
+    - name: "CIS 2.2.6 | L2 | Result: Pass if LDAP server is not enabled"
+      debug:
+        msg: "Compliant: LDAP server is not enabled."
+      when: not ldap_check.changed
+
+    - name: "CIS 2.2.6 | L2 | Result: Fail if LDAP server is enabled"
+      fail:
+        msg: "Remediation: Disable LDAP server with 'systemctl disable slapd'"
+      when: ldap_check.changed
+      ignore_errors: yes
+
+    # 2.2.7 Ensure NFS and RPC are not enabled
+    - name: "CIS 2.2.7 | L2 | Check NFS server is not enabled"
+      systemd:
+        name: nfs-server
+        enabled: no
+      check_mode: yes
+      register: nfs_check
+      failed_when: false
+
+    - name: "CIS 2.2.7 | L2 | Check RPC bind is not enabled"
+      systemd:
+        name: rpcbind
+        enabled: no
+      check_mode: yes
+      register: rpc_check
+      failed_when: false
+
+    - name: "CIS 2.2.7 | L2 | Result: Pass if NFS and RPC are not enabled"
+      debug:
+        msg: "Compliant: NFS server and RPC bind are not enabled."
+      when: not nfs_check.changed and not rpc_check.changed
+
+    - name: "CIS 2.2.7 | L2 | Result: Fail if NFS or RPC are enabled"
+      fail:
+        msg: "Remediation: Disable NFS and RPC with 'systemctl disable nfs-server rpcbind'"
+      when: nfs_check.changed or rpc_check.changed
+      ignore_errors: yes
+
+    # 2.2.8 Ensure DNS Server is not enabled
+    - name: "CIS 2.2.8 | L2 | Check DNS server is not enabled"
+      systemd:
+        name: bind9
+        enabled: no
+      check_mode: yes
+      register: dns_check
+      failed_when: false
+
+    - name: "CIS 2.2.8 | L2 | Result: Pass if DNS server is not enabled"
+      debug:
+        msg: "Compliant: DNS server is not enabled."
+      when: not dns_check.changed
+
+    - name: "CIS 2.2.8 | L2 | Result: Fail if DNS server is enabled"
+      fail:
+        msg: "Remediation: Disable DNS server with 'systemctl disable bind9'"
+      when: dns_check.changed
+      ignore_errors: yes
+
+    # 2.2.9 Ensure FTP Server is not enabled
+    - name: "CIS 2.2.9 | L2 | Check FTP server is not enabled"
+      systemd:
+        name: vsftpd
+        enabled: no
+      check_mode: yes
+      register: ftp_check
+      failed_when: false
+
+    - name: "CIS 2.2.9 | L2 | Result: Pass if FTP server is not enabled"
+      debug:
+        msg: "Compliant: FTP server is not enabled."
+      when: not ftp_check.changed
+
+    - name: "CIS 2.2.9 | L2 | Result: Fail if FTP server is enabled"
+      fail:
+        msg: "Remediation: Disable FTP server with 'systemctl disable vsftpd'"
+      when: ftp_check.changed
+      ignore_errors: yes
+
+    # 2.2.10 Ensure HTTP server is not enabled
+    - name: "CIS 2.2.10 | L2 | Check HTTP server is not enabled"
+      systemd:
+        name: apache2
+        enabled: no
+      check_mode: yes
+      register: http_check
+      failed_when: false
+
+    - name: "CIS 2.2.10 | L2 | Result: Pass if HTTP server is not enabled"
+      debug:
+        msg: "Compliant: HTTP server is not enabled."
+      when: not http_check.changed
+
+    - name: "CIS 2.2.10 | L2 | Result: Fail if HTTP server is enabled"
+      fail:
+        msg: "Remediation: Disable HTTP server with 'systemctl disable apache2'"
+      when: http_check.changed
+      ignore_errors: yes
+
+    # 2.2.11 Ensure IMAP and POP3 server is not enabled
+    - name: "CIS 2.2.11 | L2 | Check IMAP/POP3 server is not enabled"
+      systemd:
+        name: dovecot
+        enabled: no
+      check_mode: yes
+      register: imap_check
+      failed_when: false
+
+    - name: "CIS 2.2.11 | L2 | Result: Pass if IMAP/POP3 server is not enabled"
+      debug:
+        msg: "Compliant: IMAP/POP3 server is not enabled."
+      when: not imap_check.changed
+
+    - name: "CIS 2.2.11 | L2 | Result: Fail if IMAP/POP3 server is enabled"
+      fail:
+        msg: "Remediation: Disable IMAP/POP3 server with 'systemctl disable dovecot'"
+      when: imap_check.changed
+      ignore_errors: yes
+
+    # 2.2.12 Ensure Samba is not enabled
+    - name: "CIS 2.2.12 | L2 | Check Samba is not enabled"
+      systemd:
+        name: smbd
+        enabled: no
+      check_mode: yes
+      register: samba_check
+      failed_when: false
+
+    - name: "CIS 2.2.12 | L2 | Result: Pass if Samba is not enabled"
+      debug:
+        msg: "Compliant: Samba server is not enabled."
+      when: not samba_check.changed
+
+    - name: "CIS 2.2.12 | L2 | Result: Fail if Samba is enabled"
+      fail:
+        msg: "Remediation: Disable Samba with 'systemctl disable smbd'"
+      when: samba_check.changed
+      ignore_errors: yes
+
+    # 2.2.13 Ensure HTTP Proxy Server is not enabled
+    - name: "CIS 2.2.13 | L2 | Check HTTP Proxy server is not enabled"
+      systemd:
+        name: squid
+        enabled: no
+      check_mode: yes
+      register: proxy_check
+      failed_when: false
+
+    - name: "CIS 2.2.13 | L2 | Result: Pass if HTTP Proxy server is not enabled"
+      debug:
+        msg: "Compliant: HTTP Proxy server is not enabled."
+      when: not proxy_check.changed
+
+    - name: "CIS 2.2.13 | L2 | Result: Fail if HTTP Proxy server is enabled"
+      fail:
+        msg: "Remediation: Disable HTTP Proxy server with 'systemctl disable squid'"
+      when: proxy_check.changed
+      ignore_errors: yes
+
+    # 2.2.14 Ensure SNMP Server is not enabled
+    - name: "CIS 2.2.14 | L2 | Check SNMP server is not enabled"
+      systemd:
+        name: snmpd
+        enabled: no
+      check_mode: yes
+      register: snmp_check
+      failed_when: false
+
+    - name: "CIS 2.2.14 | L2 | Result: Pass if SNMP server is not enabled"
+      debug:
+        msg: "Compliant: SNMP server is not enabled."
+      when: not snmp_check.changed
+
+    - name: "CIS 2.2.14 | L2 | Result: Fail if SNMP server is enabled"
+      fail:
+        msg: "Remediation: Disable SNMP server with 'systemctl disable snmpd'"
+      when: snmp_check.changed
+      ignore_errors: yes
+
+    # 2.2.15 Ensure mail transfer agent is configured for local-only mode
+    - name: "CIS 2.2.15 | L2 | Check MTA is configured for local-only"
+      shell: |
+        if ss -lntu | grep -E ':25\s' | grep -v '127.0.0.1:25\|::1:25' > /dev/null; then
+          echo "NON_COMPLIANT"
+        else
+          echo "COMPLIANT"
+        fi
+      register: mta_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2.2.15 | L2 | Result: Pass if MTA is local-only"
+      debug:
+        msg: "Compliant: Mail transfer agent is configured for local-only mode."
+      when: mta_check.stdout == "COMPLIANT"
+
+    - name: "CIS 2.2.15 | L2 | Result: Fail if MTA is not local-only"
+      fail:
+        msg: "Remediation: Configure mail transfer agent to listen only on localhost"
+      when: mta_check.stdout != "COMPLIANT"
+      ignore_errors: yes
+
+    # 2.2.16 Ensure rsync service is not enabled
+    - name: "CIS 2.2.16 | L2 | Check rsync service is not enabled"
+      systemd:
+        name: rsync
+        enabled: no
+      check_mode: yes
+      register: rsync_check
+      failed_when: false
+
+    - name: "CIS 2.2.16 | L2 | Result: Pass if rsync service is not enabled"
+      debug:
+        msg: "Compliant: rsync service is not enabled."
+      when: not rsync_check.changed
+
+    - name: "CIS 2.2.16 | L2 | Result: Fail if rsync service is enabled"
+      fail:
+        msg: "Remediation: Disable rsync service with 'systemctl disable rsync'"
+      when: rsync_check.changed
+      ignore_errors: yes
+
+    # 2.2.17 Ensure NIS Server is not enabled
+    - name: "CIS 2.2.17 | L2 | Check NIS server is not enabled"
+      systemd:
+        name: nis
+        enabled: no
+      check_mode: yes
+      register: nis_check
+      failed_when: false
+
+    - name: "CIS 2.2.17 | L2 | Result: Pass if NIS server is not enabled"
+      debug:
+        msg: "Compliant: NIS server is not enabled."
+      when: not nis_check.changed
+
+    - name: "CIS 2.2.17 | L2 | Result: Fail if NIS server is enabled"
+      fail:
+        msg: "Remediation: Disable NIS server with 'systemctl disable nis'"
+      when: nis_check.changed
+      ignore_errors: yes
+
+    # 2.3.1 Ensure NIS Client is not installed
+    - name: "CIS 2.3.1 | L2 | Check NIS client is not installed"
+      package:
+        name: nis
+        state: absent
+      check_mode: yes
+      register: nis_client_check
+      failed_when: false
+
+    - name: "CIS 2.3.1 | L2 | Result: Pass if NIS client is not installed"
+      debug:
+        msg: "Compliant: NIS client is not installed."
+      when: not nis_client_check.changed
+
+    - name: "CIS 2.3.1 | L2 | Result: Fail if NIS client is installed"
+      fail:
+        msg: "Remediation: Remove NIS client with 'apt purge nis'"
+      when: nis_client_check.changed
+      ignore_errors: yes
+
+    # 2.3.2 Ensure rsh client is not installed
+    - name: "CIS 2.3.2 | L2 | Check rsh client is not installed"
+      package:
+        name: rsh-client
+        state: absent
+      check_mode: yes
+      register: rsh_check
+      failed_when: false
+
+    - name: "CIS 2.3.2 | L2 | Result: Pass if rsh client is not installed"
+      debug:
+        msg: "Compliant: rsh client is not installed."
+      when: not rsh_check.changed
+
+    - name: "CIS 2.3.2 | L2 | Result: Fail if rsh client is installed"
+      fail:
+        msg: "Remediation: Remove rsh client with 'apt purge rsh-client'"
+      when: rsh_check.changed
+      ignore_errors: yes
+
+    # 2.3.3 Ensure talk client is not installed
+    - name: "CIS 2.3.3 | L2 | Check talk client is not installed"
+      package:
+        name: talk
+        state: absent
+      check_mode: yes
+      register: talk_check
+      failed_when: false
+
+    - name: "CIS 2.3.3 | L2 | Result: Pass if talk client is not installed"
+      debug:
+        msg: "Compliant: talk client is not installed."
+      when: not talk_check.changed
+
+    - name: "CIS 2.3.3 | L2 | Result: Fail if talk client is installed"
+      fail:
+        msg: "Remediation: Remove talk client with 'apt purge talk'"
+      when: talk_check.changed
+      ignore_errors: yes
+
+    # 2.3.4 Ensure telnet client is not installed
+    - name: "CIS 2.3.4 | L2 | Check telnet client is not installed"
+      package:
+        name: telnet
+        state: absent
+      check_mode: yes
+      register: telnet_check
+      failed_when: false
+
+    - name: "CIS 2.3.4 | L2 | Result: Pass if telnet client is not installed"
+      debug:
+        msg: "Compliant: telnet client is not installed."
+      when: not telnet_check.changed
+
+    - name: "CIS 2.3.4 | L2 | Result: Fail if telnet client is installed"
+      fail:
+        msg: "Remediation: Remove telnet client with 'apt purge telnet'"
+      when: telnet_check.changed
+      ignore_errors: yes
+
+    # 2.3.5 Ensure LDAP client is not installed
+    - name: "CIS 2.3.5 | L2 | Check LDAP client is not installed"
+      package:
+        name: ldap-utils
+        state: absent
+      check_mode: yes
+      register: ldap_client_check
+      failed_when: false
+
+    - name: "CIS 2.3.5 | L2 | Result: Pass if LDAP client is not installed"
+      debug:
+        msg: "Compliant: LDAP client is not installed."
+      when: not ldap_client_check.changed
+
+    - name: "CIS 2.3.5 | L2 | Result: Fail if LDAP client is installed"
+      fail:
+        msg: "Remediation: Remove LDAP client with 'apt purge ldap-utils'"
+      when: ldap_client_check.changed
+      ignore_errors: yes
+
+    # 3.2.1 Ensure source routed packets are not accepted
+    - name: "CIS 3.2.1 | L2 | Check source routed packets are not accepted"
+      shell: |
+        all_accept=$(sysctl net.ipv4.conf.all.accept_source_route 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_accept=$(sysctl net.ipv4.conf.default.accept_source_route 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_accept" = "0" ] && [ "$default_accept" = "0" ]; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: source_route_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.1 | L2 | Result: Pass if source routed packets are not accepted"
+      debug:
+        msg: "Compliant: Source routed packets are not accepted."
+      when: source_route_check.stdout == "DISABLED"
+
+    - name: "CIS 3.2.1 | L2 | Result: Fail if source routed packets are accepted"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.conf.all.accept_source_route = 0' and 'net.ipv4.conf.default.accept_source_route = 0' in /etc/sysctl.conf"
+      when: source_route_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 3.2.2 Ensure ICMP redirects are not accepted
+    - name: "CIS 3.2.2 | L2 | Check ICMP redirects are not accepted"
+      shell: |
+        all_redirect=$(sysctl net.ipv4.conf.all.accept_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_redirect=$(sysctl net.ipv4.conf.default.accept_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_redirect" = "0" ] && [ "$default_redirect" = "0" ]; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: icmp_redirect_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.2 | L2 | Result: Pass if ICMP redirects are not accepted"
+      debug:
+        msg: "Compliant: ICMP redirects are not accepted."
+      when: icmp_redirect_check.stdout == "DISABLED"
+
+    - name: "CIS 3.2.2 | L2 | Result: Fail if ICMP redirects are accepted"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.conf.all.accept_redirects = 0' and 'net.ipv4.conf.default.accept_redirects = 0' in /etc/sysctl.conf"
+      when: icmp_redirect_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 3.2.3 Ensure secure ICMP redirects are not accepted
+    - name: "CIS 3.2.3 | L2 | Check secure ICMP redirects are not accepted"
+      shell: |
+        all_secure=$(sysctl net.ipv4.conf.all.secure_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_secure=$(sysctl net.ipv4.conf.default.secure_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_secure" = "0" ] && [ "$default_secure" = "0" ]; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: secure_redirect_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.3 | L2 | Result: Pass if secure ICMP redirects are not accepted"
+      debug:
+        msg: "Compliant: Secure ICMP redirects are not accepted."
+      when: secure_redirect_check.stdout == "DISABLED"
+
+    - name: "CIS 3.2.3 | L2 | Result: Fail if secure ICMP redirects are accepted"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.conf.all.secure_redirects = 0' and 'net.ipv4.conf.default.secure_redirects = 0' in /etc/sysctl.conf"
+      when: secure_redirect_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 3.2.4 Ensure suspicious packets are logged
+    - name: "CIS 3.2.4 | L2 | Check suspicious packets are logged"
+      shell: |
+        all_log=$(sysctl net.ipv4.conf.all.log_martians 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_log=$(sysctl net.ipv4.conf.default.log_martians 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_log" = "1" ] && [ "$default_log" = "1" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: log_martians_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.4 | L2 | Result: Pass if suspicious packets are logged"
+      debug:
+        msg: "Compliant: Suspicious packets are logged."
+      when: log_martians_check.stdout == "ENABLED"
+
+    - name: "CIS 3.2.4 | L2 | Result: Fail if suspicious packets are not logged"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.conf.all.log_martians = 1' and 'net.ipv4.conf.default.log_martians = 1' in /etc/sysctl.conf"
+      when: log_martians_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 3.2.5 Ensure broadcast ICMP requests are ignored
+    - name: "CIS 3.2.5 | L2 | Check broadcast ICMP requests are ignored"
+      shell: |
+        icmp_echo=$(sysctl net.ipv4.icmp_echo_ignore_broadcasts 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$icmp_echo" = "1" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: icmp_broadcast_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.5 | L2 | Result: Pass if broadcast ICMP requests are ignored"
+      debug:
+        msg: "Compliant: Broadcast ICMP requests are ignored."
+      when: icmp_broadcast_check.stdout == "ENABLED"
+
+    - name: "CIS 3.2.5 | L2 | Result: Fail if broadcast ICMP requests are not ignored"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.icmp_echo_ignore_broadcasts = 1' in /etc/sysctl.conf"
+      when: icmp_broadcast_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 3.2.6 Ensure bogus ICMP responses are ignored
+    - name: "CIS 3.2.6 | L2 | Check bogus ICMP responses are ignored"
+      shell: |
+        icmp_bogus=$(sysctl net.ipv4.icmp_ignore_bogus_error_responses 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$icmp_bogus" = "1" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: icmp_bogus_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.6 | L2 | Result: Pass if bogus ICMP responses are ignored"
+      debug:
+        msg: "Compliant: Bogus ICMP responses are ignored."
+      when: icmp_bogus_check.stdout == "ENABLED"
+
+    - name: "CIS 3.2.6 | L2 | Result: Fail if bogus ICMP responses are not ignored"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.icmp_ignore_bogus_error_responses = 1' in /etc/sysctl.conf"
+      when: icmp_bogus_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 3.2.7 Ensure Reverse Path Filtering is enabled
+    - name: "CIS 3.2.7 | L2 | Check Reverse Path Filtering is enabled"
+      shell: |
+        all_rp_filter=$(sysctl net.ipv4.conf.all.rp_filter 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_rp_filter=$(sysctl net.ipv4.conf.default.rp_filter 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_rp_filter" = "1" ] && [ "$default_rp_filter" = "1" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: rp_filter_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.7 | L2 | Result: Pass if Reverse Path Filtering is enabled"
+      debug:
+        msg: "Compliant: Reverse Path Filtering is enabled."
+      when: rp_filter_check.stdout == "ENABLED"
+
+    - name: "CIS 3.2.7 | L2 | Result: Fail if Reverse Path Filtering is not enabled"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.conf.all.rp_filter = 1' and 'net.ipv4.conf.default.rp_filter = 1' in /etc/sysctl.conf"
+      when: rp_filter_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 3.2.8 Ensure TCP SYN Cookies is enabled
+    - name: "CIS 3.2.8 | L2 | Check TCP SYN Cookies is enabled"
+      shell: |
+        syn_cookies=$(sysctl net.ipv4.tcp_syncookies 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$syn_cookies" = "1" ]; then
+          echo "ENABLED"
+        else
+          echo "DISABLED"
+        fi
+      register: syn_cookies_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.2.8 | L2 | Result: Pass if TCP SYN Cookies is enabled"
+      debug:
+        msg: "Compliant: TCP SYN Cookies is enabled."
+      when: syn_cookies_check.stdout == "ENABLED"
+
+    - name: "CIS 3.2.8 | L2 | Result: Fail if TCP SYN Cookies is not enabled"
+      fail:
+        msg: "Remediation: Set 'net.ipv4.tcp_syncookies = 1' in /etc/sysctl.conf"
+      when: syn_cookies_check.stdout != "ENABLED"
+      ignore_errors: yes
+
+    # 3.3.1 Ensure IPv6 router advertisements are not accepted
+    - name: "CIS 3.3.1 | L2 | Check IPv6 router advertisements are not accepted"
+      shell: |
+        all_ipv6=$(sysctl net.ipv6.conf.all.accept_ra 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_ipv6=$(sysctl net.ipv6.conf.default.accept_ra 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_ipv6" = "0" ] && [ "$default_ipv6" = "0" ]; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: ipv6_ra_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.3.1 | L2 | Result: Pass if IPv6 router advertisements are not accepted"
+      debug:
+        msg: "Compliant: IPv6 router advertisements are not accepted."
+      when: ipv6_ra_check.stdout == "DISABLED"
+
+    - name: "CIS 3.3.1 | L2 | Result: Fail if IPv6 router advertisements are accepted"
+      fail:
+        msg: "Remediation: Set 'net.ipv6.conf.all.accept_ra = 0' and 'net.ipv6.conf.default.accept_ra = 0' in /etc/sysctl.conf"
+      when: ipv6_ra_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 3.3.2 Ensure IPv6 redirects are not accepted
+    - name: "CIS 3.3.2 | L2 | Check IPv6 redirects are not accepted"
+      shell: |
+        all_ipv6_redirect=$(sysctl net.ipv6.conf.all.accept_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        default_ipv6_redirect=$(sysctl net.ipv6.conf.default.accept_redirects 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        if [ "$all_ipv6_redirect" = "0" ] && [ "$default_ipv6_redirect" = "0" ]; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: ipv6_redirect_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.3.2 | L2 | Result: Pass if IPv6 redirects are not accepted"
+      debug:
+        msg: "Compliant: IPv6 redirects are not accepted."
+      when: ipv6_redirect_check.stdout == "DISABLED"
+
+    - name: "CIS 3.3.2 | L2 | Result: Fail if IPv6 redirects are accepted"
+      fail:
+        msg: "Remediation: Set 'net.ipv6.conf.all.accept_redirects = 0' and 'net.ipv6.conf.default.accept_redirects = 0' in /etc/sysctl.conf"
+      when: ipv6_redirect_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 3.3.3 Ensure IPv6 is disabled
+    - name: "CIS 3.3.3 | L2 | Check IPv6 is disabled"
+      shell: |
+        if grep -q "ipv6.disable=1" /proc/cmdline 2>/dev/null; then
+          echo "DISABLED"
+        else
+          echo "ENABLED"
+        fi
+      register: ipv6_disabled_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3.3.3 | L2 | Result: Pass if IPv6 is disabled"
+      debug:
+        msg: "Compliant: IPv6 is disabled."
+      when: ipv6_disabled_check.stdout == "DISABLED"
+
+    - name: "CIS 3.3.3 | L2 | Result: Fail if IPv6 is not disabled"
+      fail:
+        msg: "Remediation: Add 'ipv6.disable=1' to GRUB_CMDLINE_LINUX in /etc/default/grub and run 'update-grub'"
+      when: ipv6_disabled_check.stdout != "DISABLED"
+      ignore_errors: yes
+
+    # 5.2.11 Ensure only approved MAC algorithms are used
+    - name: "CIS 5.2.11 | L2 | Check SSH MAC algorithms"
+      shell: |
+        if grep -q "^MACs" /etc/ssh/sshd_config 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: ssh_mac_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.2.11 | L2 | Result: Pass if SSH MAC algorithms are configured"
+      debug:
+        msg: "Compliant: SSH MAC algorithms are properly configured."
+      when: ssh_mac_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.2.11 | L2 | Result: Fail if SSH MAC algorithms are not configured"
+      fail:
+        msg: "Remediation: Configure MACs in /etc/ssh/sshd_config (e.g., 'MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com')"
+      when: ssh_mac_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.2.12 Ensure SSH Idle Timeout Interval is configured
+    - name: "CIS 5.2.12 | L2 | Check SSH ClientAliveInterval"
+      shell: |
+        client_alive=$(grep "^ClientAliveInterval" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}')
+        client_max=$(grep "^ClientAliveCountMax" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}')
+        if [ -n "$client_alive" ] && [ "$client_alive" -le 300 ] && [ "$client_alive" -gt 0 ] && [ -n "$client_max" ] && [ "$client_max" -le 3 ]; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: ssh_timeout_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.2.12 | L2 | Result: Pass if SSH timeout is configured"
+      debug:
+        msg: "Compliant: SSH idle timeout interval is properly configured."
+      when: ssh_timeout_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.2.12 | L2 | Result: Fail if SSH timeout is not configured"
+      fail:
+        msg: "Remediation: Set 'ClientAliveInterval 300' and 'ClientAliveCountMax 0' in /etc/ssh/sshd_config"
+      when: ssh_timeout_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.2.13 Ensure SSH LoginGraceTime is set to one minute or less
+    - name: "CIS 5.2.13 | L2 | Check SSH LoginGraceTime"
+      shell: |
+        grace_time=$(grep "^LoginGraceTime" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}')
+        if [ -n "$grace_time" ] && [ "$grace_time" -le 60 ] && [ "$grace_time" -gt 0 ]; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: ssh_grace_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.2.13 | L2 | Result: Pass if SSH LoginGraceTime is configured"
+      debug:
+        msg: "Compliant: SSH LoginGraceTime is set to 60 seconds or less."
+      when: ssh_grace_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.2.13 | L2 | Result: Fail if SSH LoginGraceTime is not configured"
+      fail:
+        msg: "Remediation: Set 'LoginGraceTime 60' in /etc/ssh/sshd_config"
+      when: ssh_grace_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.2.14 Ensure SSH access is limited
+    - name: "CIS 5.2.14 | L2 | Check SSH access is limited"
+      shell: |
+        if grep -E "^(AllowUsers|AllowGroups|DenyUsers|DenyGroups)" /etc/ssh/sshd_config > /dev/null 2>&1; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: ssh_access_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.2.14 | L2 | Result: Pass if SSH access is limited"
+      debug:
+        msg: "Compliant: SSH access is properly limited."
+      when: ssh_access_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.2.14 | L2 | Result: Fail if SSH access is not limited"
+      fail:
+        msg: "Remediation: Configure AllowUsers, AllowGroups, DenyUsers, or DenyGroups in /etc/ssh/sshd_config"
+      when: ssh_access_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.2.15 Ensure SSH warning banner is configured
+    - name: "CIS 5.2.15 | L2 | Check SSH warning banner is configured"
+      shell: |
+        if grep -q "^Banner" /etc/ssh/sshd_config 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: ssh_banner_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.2.15 | L2 | Result: Pass if SSH banner is configured"
+      debug:
+        msg: "Compliant: SSH warning banner is configured."
+      when: ssh_banner_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.2.15 | L2 | Result: Fail if SSH banner is not configured"
+      fail:
+        msg: "Remediation: Set 'Banner /etc/issue.net' in /etc/ssh/sshd_config"
+      when: ssh_banner_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.3.2 Ensure lockout for failed password attempts is configured
+    - name: "CIS 5.3.2 | L2 | Check password lockout is configured"
+      shell: |
+        if grep -q "pam_tally2\|pam_faillock" /etc/pam.d/common-auth 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: pwd_lockout_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.3.2 | L2 | Result: Pass if password lockout is configured"
+      debug:
+        msg: "Compliant: Password lockout for failed attempts is configured."
+      when: pwd_lockout_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.3.2 | L2 | Result: Fail if password lockout is not configured"
+      fail:
+        msg: "Remediation: Configure pam_tally2 or pam_faillock in /etc/pam.d/common-auth for account lockout"
+      when: pwd_lockout_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.3.3 Ensure password reuse is limited
+    - name: "CIS 5.3.3 | L2 | Check password reuse is limited"
+      shell: |
+        if grep -q "remember=" /etc/pam.d/common-password 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: pwd_reuse_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.3.3 | L2 | Result: Pass if password reuse is limited"
+      debug:
+        msg: "Compliant: Password reuse is properly limited."
+      when: pwd_reuse_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.3.3 | L2 | Result: Fail if password reuse is not limited"
+      fail:
+        msg: "Remediation: Add 'remember=5' to pam_unix.so line in /etc/pam.d/common-password"
+      when: pwd_reuse_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.3.4 Ensure password hashing algorithm is SHA-512
+    - name: "CIS 5.3.4 | L2 | Check password hashing algorithm"
+      shell: |
+        if grep -q "sha512" /etc/pam.d/common-password 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: pwd_hash_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.3.4 | L2 | Result: Pass if SHA-512 hashing is configured"
+      debug:
+        msg: "Compliant: Password hashing algorithm is set to SHA-512."
+      when: pwd_hash_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.3.4 | L2 | Result: Fail if SHA-512 hashing is not configured"
+      fail:
+        msg: "Remediation: Add 'sha512' to pam_unix.so line in /etc/pam.d/common-password"
+      when: pwd_hash_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 5.4.1.4 Ensure inactive password lock is 30 days or less
+    - name: "CIS 5.4.1.4 | L2 | Check inactive password lock"
+      shell: |
+        inactive_days=$(useradd -D | grep INACTIVE | cut -d= -f2)
+        if [ -n "$inactive_days" ] && [ "$inactive_days" -le 30 ] && [ "$inactive_days" -ge 0 ]; then
+          echo "COMPLIANT"
+        else
+          echo "NON_COMPLIANT"
+        fi
+      register: pwd_inactive_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.4.1.4 | L2 | Result: Pass if inactive password lock is 30 days or less"
+      debug:
+        msg: "Compliant: Inactive password lock is set to 30 days or less."
+      when: pwd_inactive_check.stdout == "COMPLIANT"
+
+    - name: "CIS 5.4.1.4 | L2 | Result: Fail if inactive password lock is more than 30 days"
+      fail:
+        msg: "Remediation: Set 'INACTIVE=30' in /etc/default/useradd"
+      when: pwd_inactive_check.stdout != "COMPLIANT"
+      ignore_errors: yes
+
+    # 5.4.1.5 Ensure all users last password change date is in the past
+    - name: "CIS 5.4.1.5 | L2 | Check users last password change date"
+      shell: |
+        future_dates=$(awk -F: '($3>=1000) && ($2!="*") && ($2!="!") {print $1}' /etc/passwd | while read user; do chage -l "$user" 2>/dev/null | grep "Last password change" | grep -v "never\|password must be changed"; done | wc -l)
+        if [ "$future_dates" -eq 0 ]; then
+          echo "COMPLIANT"
+        else
+          echo "NON_COMPLIANT"
+        fi
+      register: pwd_change_date_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.4.1.5 | L2 | Result: Pass if all password change dates are in the past"
+      debug:
+        msg: "Compliant: All users' last password change dates are in the past."
+      when: pwd_change_date_check.stdout == "COMPLIANT"
+
+    - name: "CIS 5.4.1.5 | L2 | Result: Fail if password change dates are in the future"
+      fail:
+        msg: "Remediation: Investigate and correct users with future password change dates"
+      when: pwd_change_date_check.stdout != "COMPLIANT"
+      ignore_errors: yes
+
+    # 5.5 Ensure root login is restricted to system console
+    - name: "CIS 5.5 | L2 | Check root login is restricted to system console"
+      stat:
+        path: "/etc/securetty"
+      register: securetty_stat
+
+    - name: "CIS 5.5 | L2 | Result: Pass if /etc/securetty exists"
+      debug:
+        msg: "Compliant: Root login is restricted to system console via /etc/securetty."
+      when: securetty_stat.stat.exists
+
+    - name: "CIS 5.5 | L2 | Result: Fail if /etc/securetty does not exist"
+      fail:
+        msg: "Remediation: Create /etc/securetty file to restrict root login to specific terminals"
+      when: not securetty_stat.stat.exists
+      ignore_errors: yes
+
+    # 5.6 Ensure access to the su command is restricted
+    - name: "CIS 5.6 | L2 | Check su command access is restricted"
+      shell: |
+        if grep -q "pam_wheel.so use_uid" /etc/pam.d/su 2>/dev/null; then
+          echo "CONFIGURED"
+        else
+          echo "NOT_CONFIGURED"
+        fi
+      register: su_access_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5.6 | L2 | Result: Pass if su access is restricted"
+      debug:
+        msg: "Compliant: Access to su command is properly restricted."
+      when: su_access_check.stdout == "CONFIGURED"
+
+    - name: "CIS 5.6 | L2 | Result: Fail if su access is not restricted"
+      fail:
+        msg: "Remediation: Uncomment 'auth required pam_wheel.so use_uid' in /etc/pam.d/su and add users to wheel group"
+      when: su_access_check.stdout != "CONFIGURED"
+      ignore_errors: yes
+
+    # 6.1.6 Ensure permissions on /etc/passwd- are configured
+    - name: "CIS 6.1.6 | L2 | Check /etc/passwd- permissions"
+      stat:
+        path: "/etc/passwd-"
+      register: passwd_backup_stat
+
+    - name: "CIS 6.1.6 | L2 | Result: Pass if /etc/passwd- permissions are correct"
+      debug:
+        msg: "Compliant: /etc/passwd- has correct permissions and ownership."
+      when: passwd_backup_stat.stat.exists and passwd_backup_stat.stat.mode == '0600' and passwd_backup_stat.stat.pw_name == 'root' and passwd_backup_stat.stat.gr_name == 'root'
+
+    - name: "CIS 6.1.6 | L2 | Result: Fail if /etc/passwd- permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /etc/passwd- && chmod 600 /etc/passwd-'"
+      when: passwd_backup_stat.stat.exists and (passwd_backup_stat.stat.mode != '0600' or passwd_backup_stat.stat.pw_name != 'root' or passwd_backup_stat.stat.gr_name != 'root')
+      ignore_errors: yes
+
+    # 6.1.7 Ensure permissions on /etc/shadow- are configured
+    - name: "CIS 6.1.7 | L2 | Check /etc/shadow- permissions"
+      stat:
+        path: "/etc/shadow-"
+      register: shadow_backup_stat
+
+    - name: "CIS 6.1.7 | L2 | Result: Pass if /etc/shadow- permissions are correct"
+      debug:
+        msg: "Compliant: /etc/shadow- has correct permissions and ownership."
+      when: shadow_backup_stat.stat.exists and shadow_backup_stat.stat.mode == '0600' and shadow_backup_stat.stat.pw_name == 'root' and shadow_backup_stat.stat.gr_name == 'root'
+
+    - name: "CIS 6.1.7 | L2 | Result: Fail if /etc/shadow- permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /etc/shadow- && chmod 600 /etc/shadow-'"
+      when: shadow_backup_stat.stat.exists and (shadow_backup_stat.stat.mode != '0600' or shadow_backup_stat.stat.pw_name != 'root' or shadow_backup_stat.stat.gr_name != 'root')
+      ignore_errors: yes
+
+    # 6.1.8 Ensure permissions on /etc/group- are configured
+    - name: "CIS 6.1.8 | L2 | Check /etc/group- permissions"
+      stat:
+        path: "/etc/group-"
+      register: group_backup_stat
+
+    - name: "CIS 6.1.8 | L2 | Result: Pass if /etc/group- permissions are correct"
+      debug:
+        msg: "Compliant: /etc/group- has correct permissions and ownership."
+      when: group_backup_stat.stat.exists and group_backup_stat.stat.mode == '0600' and group_backup_stat.stat.pw_name == 'root' and group_backup_stat.stat.gr_name == 'root'
+
+    - name: "CIS 6.1.8 | L2 | Result: Fail if /etc/group- permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /etc/group- && chmod 600 /etc/group-'"
+      when: group_backup_stat.stat.exists and (group_backup_stat.stat.mode != '0600' or group_backup_stat.stat.pw_name != 'root' or group_backup_stat.stat.gr_name != 'root')
+      ignore_errors: yes
+
+    # 6.1.9 Ensure permissions on /etc/gshadow- are configured
+    - name: "CIS 6.1.9 | L2 | Check /etc/gshadow- permissions"
+      stat:
+        path: "/etc/gshadow-"
+      register: gshadow_backup_stat
+
+    - name: "CIS 6.1.9 | L2 | Result: Pass if /etc/gshadow- permissions are correct"
+      debug:
+        msg: "Compliant: /etc/gshadow- has correct permissions and ownership."
+      when: gshadow_backup_stat.stat.exists and gshadow_backup_stat.stat.mode == '0600' and gshadow_backup_stat.stat.pw_name == 'root' and gshadow_backup_stat.stat.gr_name == 'root'
+
+    - name: "CIS 6.1.9 | L2 | Result: Fail if /etc/gshadow- permissions are incorrect"
+      fail:
+        msg: "Remediation: Set correct permissions with 'chown root:root /etc/gshadow- && chmod 600 /etc/gshadow-'"
+      when: gshadow_backup_stat.stat.exists and (gshadow_backup_stat.stat.mode != '0600' or gshadow_backup_stat.stat.pw_name != 'root' or gshadow_backup_stat.stat.gr_name != 'root')
+      ignore_errors: yes
+
+    # 6.1.10 Ensure no world writable files exist
+    - name: "CIS 6.1.10 | L2 | Check for world writable files"
+      shell: |
+        df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null | wc -l
+      register: world_writable_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.1.10 | L2 | Result: Pass if no world writable files exist"
+      debug:
+        msg: "Compliant: No world writable files found."
+      when: world_writable_check.stdout|int == 0
+
+    - name: "CIS 6.1.10 | L2 | Result: Fail if world writable files exist"
+      fail:
+        msg: "Remediation: {{ world_writable_check.stdout }} world writable files found. Review and remove world write permissions"
+      when: world_writable_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.1.11 Ensure no unowned files or directories exist
+    - name: "CIS 6.1.11 | L2 | Check for unowned files"
+      shell: |
+        df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -nouser 2>/dev/null | wc -l
+      register: unowned_files_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.1.11 | L2 | Result: Pass if no unowned files exist"
+      debug:
+        msg: "Compliant: No unowned files or directories found."
+      when: unowned_files_check.stdout|int == 0
+
+    - name: "CIS 6.1.11 | L2 | Result: Fail if unowned files exist"
+      fail:
+        msg: "Remediation: {{ unowned_files_check.stdout }} unowned files found. Review and assign proper ownership"
+      when: unowned_files_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.1.12 Ensure no ungrouped files or directories exist
+    - name: "CIS 6.1.12 | L2 | Check for ungrouped files"
+      shell: |
+        df --local -P | awk '{if (NR!=1) print $6}' | xargs -I '{}' find '{}' -xdev -nogroup 2>/dev/null | wc -l
+      register: ungrouped_files_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.1.12 | L2 | Result: Pass if no ungrouped files exist"
+      debug:
+        msg: "Compliant: No ungrouped files or directories found."
+      when: ungrouped_files_check.stdout|int == 0
+
+    - name: "CIS 6.1.12 | L2 | Result: Fail if ungrouped files exist"
+      fail:
+        msg: "Remediation: {{ ungrouped_files_check.stdout }} ungrouped files found. Review and assign proper group ownership"
+      when: ungrouped_files_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.2.1 Ensure password fields are not empty
+    - name: "CIS 6.2.1 | L2 | Check for empty password fields"
+      shell: |
+        awk -F: '($2 == "" ) { print $1 }' /etc/shadow | wc -l
+      register: empty_password_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.2.1 | L2 | Result: Pass if no empty password fields"
+      debug:
+        msg: "Compliant: No accounts with empty password fields found."
+      when: empty_password_check.stdout|int == 0
+
+    - name: "CIS 6.2.1 | L2 | Result: Fail if empty password fields exist"
+      fail:
+        msg: "Remediation: {{ empty_password_check.stdout }} accounts have empty passwords. Lock or remove these accounts"
+      when: empty_password_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.2.2 Ensure no legacy "+" entries exist in /etc/passwd
+    - name: "CIS 6.2.2 | L2 | Check for legacy entries in /etc/passwd"
+      shell: |
+        grep '^+:' /etc/passwd 2>/dev/null | wc -l
+      register: passwd_legacy_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.2.2 | L2 | Result: Pass if no legacy entries in /etc/passwd"
+      debug:
+        msg: "Compliant: No legacy '+' entries found in /etc/passwd."
+      when: passwd_legacy_check.stdout|int == 0
+
+    - name: "CIS 6.2.2 | L2 | Result: Fail if legacy entries exist in /etc/passwd"
+      fail:
+        msg: "Remediation: Remove legacy '+' entries from /etc/passwd"
+      when: passwd_legacy_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.2.3 Ensure no legacy "+" entries exist in /etc/shadow
+    - name: "CIS 6.2.3 | L2 | Check for legacy entries in /etc/shadow"
+      shell: |
+        grep '^+:' /etc/shadow 2>/dev/null | wc -l
+      register: shadow_legacy_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.2.3 | L2 | Result: Pass if no legacy entries in /etc/shadow"
+      debug:
+        msg: "Compliant: No legacy '+' entries found in /etc/shadow."
+      when: shadow_legacy_check.stdout|int == 0
+
+    - name: "CIS 6.2.3 | L2 | Result: Fail if legacy entries exist in /etc/shadow"
+      fail:
+        msg: "Remediation: Remove legacy '+' entries from /etc/shadow"
+      when: shadow_legacy_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.2.4 Ensure no legacy "+" entries exist in /etc/group
+    - name: "CIS 6.2.4 | L2 | Check for legacy entries in /etc/group"
+      shell: |
+        grep '^+:' /etc/group 2>/dev/null | wc -l
+      register: group_legacy_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.2.4 | L2 | Result: Pass if no legacy entries in /etc/group"
+      debug:
+        msg: "Compliant: No legacy '+' entries found in /etc/group."
+      when: group_legacy_check.stdout|int == 0
+
+    - name: "CIS 6.2.4 | L2 | Result: Fail if legacy entries exist in /etc/group"
+      fail:
+        msg: "Remediation: Remove legacy '+' entries from /etc/group"
+      when: group_legacy_check.stdout|int > 0
+      ignore_errors: yes
+
+    # 6.2.5 Ensure root is the only UID 0 account
+    - name: "CIS 6.2.5 | L2 | Check root is the only UID 0 account"
+      shell: |
+        awk -F: '($3 == 0) { print $1 }' /etc/passwd | grep -v root | wc -l
+      register: uid_zero_check
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6.2.5 | L2 | Result: Pass if root is the only UID 0 account"
+      debug:
+        msg: "Compliant: Root is the only account with UID 0."
+      when: uid_zero_check.stdout|int == 0
+
+    - name: "CIS 6.2.5 | L2 | Result: Fail if other UID 0 accounts exist"
+      fail:
+        msg: "Remediation: {{ uid_zero_check.stdout }} non-root accounts with UID 0 found. Remove or change their UID"
+      when: uid_zero_check.stdout|int > 0
+      ignore_errors: yes
+
+    # Final summary
+    - name: "CIS Level 2 Audit Summary"
+      debug:
+        msg: "CIS Level 2 Ubuntu Server audit completed. Review all failed checks and implement recommended remediations."
