@@ -32,4 +32,11 @@ Follow these steps to get started:
    # On Windows
    venv\Scripts\activate
 
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+
+4. **Run The Application*
+   ```bash
+   python web_api.py
 
